@@ -1,0 +1,497 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <!-- تصميم وإعداد: المهندس عمر أيمن عودة -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>المستشفيات - دليل فلسطين الطبي</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome for Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <!-- Amiri Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+  <!-- Cairo Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+  <!-- Montserrat Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    /* إعداد وتصميم: المهندس عمر أيمن عودة */
+    body {
+      font-family: 'Amiri', serif;
+      background-color: #FAF9F6;
+      color: #222222;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+    .dark-mode {
+      background-color: #222222;
+      color: #FAF9F6;
+    }
+    .dark-mode .bg-cream { background-color: #333333 !important; }
+    .dark-mode .text-dark { color: #FAF9F6 !important; }
+    .dark-mode .bg-gray-light { background-color: #444444 !important; }
+    h1, h2, h3 {
+      font-family: 'Cairo', sans-serif;
+      font-weight: 700;
+    }
+    .navbar {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 600;
+    }
+    .card {
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      border-radius: 12px;
+    }
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+    }
+    .btn-primary {
+      background-color: #556B2F;
+      transition: background-color 0.3s ease, transform 0.2s ease;
+    }
+    .btn-primary:hover {
+      background-color: #6B8E23;
+      transform: scale(1.05);
+    }
+    .btn-map {
+      background-color: #B22222;
+      transition: background-color 0.3s ease, transform 0.2s ease;
+    }
+    .btn-map:hover {
+      background-color: #8B0000;
+      transform: scale(1.05);
+    }
+    .filter-btn {
+      background-color: #E5E5E5;
+      transition: background-color 0.3s ease;
+    }
+    .filter-btn:hover, .filter-btn.active {
+      background-color: #556B2F;
+      color: #FAF9F6;
+    }
+    /* أنيميشن التحميل */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in {
+      animation: fadeIn 0.8s ease-out forwards;
+    }
+    .footer-text {
+      font-family: 'Cairo', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+  <!-- Sticky Navbar: تصميم وإعداد المهندس عمر أيمن عودة -->
+  <nav class="bg-cream sticky top-0 z-50 shadow-lg">
+    <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+      <div class="flex items-center">
+        <i class="fas fa-hospital text-3xl text-olive mr-3"></i>
+        <a href="index.html" class="text-3xl font-bold text-red-dark">دليل فلسطين الطبي</a>
+      </div>
+      <div class="flex items-center space-x-6 space-x-reverse">
+        <a href="index.html" class="text-dark hover:text-olive navbar text-lg">الرئيسية</a>
+        <a href="hospitals.html" class="text-dark hover:text-olive navbar text-lg font-bold">المستشفيات</a>
+        <a href="clinics.html" class="text-dark hover:text-olive navbar text-lg">العيادات</a>
+        <a href="map.html" class="text-dark hover:text-olive navbar text-lg">الخريطة</a>
+        <a href="about.html" class="text-dark hover:text-olive navbar text-lg">من نحن</a>
+        <a href="contact.html" class="text-dark hover:text-olive navbar text-lg">اتصل بنا</a>
+        <button id="theme-toggle" class="text-dark hover:text-olive text-lg">
+          <i class="fas fa-moon"></i>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section: تصميم وإعداد المهندس عمر أيمن عودة -->
+  <section class="bg-cream py-16 fade-in">
+    <div class="container mx-auto px-4 text-center">
+      <h1 class="text-4xl md:text-5xl text-red-dark font-bold mb-6">المستشفيات في محافظات شمال الضفة الغربية</h1>
+      <p class="text-xl text-dark mb-8 max-w-3xl mx-auto">استكشف قائمة شاملة لجميع المستشفيات في نابلس، جنين، طولكرم، قلقيلية، طوباس، وسلفيت مع تفاصيل الاتصال والموقع</p>
+    </div>
+  </section>
+
+  <!-- Filter Section: تصميم وإعداد المهندس عمر أيمن عودة -->
+  <section class="container mx-auto px-4 py-8">
+    <div class="flex flex-wrap gap-4 justify-center mb-8">
+      <button class="filter-btn px-6 py-2 rounded-lg text-dark active" data-filter="all">الكل</button>
+      <button class="filter-btn px-6 py-2 rounded-lg text-dark" data-filter="nablus">نابلس</button>
+      <button class="filter-btn px-6 py-2 rounded-lg text-dark" data-filter="jenin">جنين</button>
+      <button class="filter-btn px-6 py-2 rounded-lg text-dark" data-filter="tulkarm">طولكرم</button>
+      <button class="filter-btn px-6 py-2 rounded-lg text-dark" data-filter="qalqilya">قلقيلية</button>
+      <button class="filter-btn px-6 py-2 rounded-lg text-dark" data-filter="tubas">طوباس</button>
+      <button class="filter-btn px-6 py-2 rounded-lg text-dark" data-filter="salfit">سلفيت</button>
+    </div>
+  </section>
+
+  <!-- Hospitals List Section: تصميم وإعداد المهندس عمر أيمن عودة -->
+  <section class="container mx-auto px-4 py-12">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8" id="facility-list">
+      <!-- Nablus Hospitals -->
+      <div class="card bg-white rounded-xl shadow-lg p-6 fade-in facility" data-city="nablus">
+        <i class="fas fa-hospital-alt text-4xl text-olive mb-4"></i>
+        <h3 class="text-xl text-red-dark font-bold mb-2">مستشفى رفيديا الجراحي الحكومي</h3>
+        <p class="text-dark mb-1">العنوان: حي رفيديا، نابلس</p>
+        <p class="text-dark mb-4"><a href="tel:092390390" class="text-olive hover:underline">رقم الهاتف: 09-2390390</a></p>
+        <div class="flex space-x-4 space-x-reverse">
+          <a href="map.html" class="btn-map text-white px-6 py-2 rounded-lg inline-block">عرض على الخريطة</a>
+          <a href="#" class="btn-primary text-white px-6 py-2 rounded-lg inline-block">عرض التفاصيل</a>
+        </div>
+      </div>
+      <div class="card bg-white rounded-xl shadow-lg p-6 fade-in facility" data-city="nablus">
+        <i class="fas fa-hospital-alt text-4xl text-olive mb-4"></i>
+        <h3 class="text-xl text-red-dark font-bold mb-2">المستشفى الوطني الحكومي</h3>
+        <p class="text-dark mb-1">العنوان: وسط المدينة، نابلس</p>
+        <p class="text-dark mb-4"><a href="tel:092384837" class="text-olive hover:underline">رقم الهاتف: 09-2384837</a></p>
+        <div class="flex space-x-4 space-x-reverse">
+          <a href="map.html" class="btn-map text-white px-6 py-2 rounded-lg inline-block">عرض على الخريطة</a>
+          <a href="#" class="btn-primary text-white px-6 py-2 rounded-lg inline-block">عرض التفاصيل</a>
+        </div>
+      </div>
+      <div class="card bg-white rounded-xl shadow-lg p-6 fade-in facility" data-city="nablus">
+        <i class="fas fa-hospital-alt text-4xl text-olive mb-4"></i>
+        <h3 class="text-xl text-red-dark font-bold mb-2">مستشفى النجاح الوطني الجامعي</h3>
+        <p class="text-dark mb-1">العنوان: شارع النجاح، نابلس</p>
+        <p class="text-dark mb-4"><a href="tel:092331471" class="text-olive hover:underline">رقم الهاتف: 09-2331471</a></p>
+        <div class="flex space-x-4 space-x-reverse">
+          <a href="map.html" class="btn-map text-white px-6 py-2 rounded-lg inline-block">عرض على الخريطة</a>
+          <a href="#" class="btn-primary text-white px-6 py-2 rounded-lg inline-block">عرض التفاصيل</a>
+        </div>
+      </div>
+      <div class="card bg-white rounded-xl shadow-lg p-6 fade-in facility" data-city="nablus">
+        <i class="fas fa-hospital-alt text-4xl text-olive mb-4"></i>
+        <h3 class="text-xl text-red-dark font-bold mb-2">مستشفى العربي التخصصي</h3>
+        <p class="text-dark mb-1">العنوان: شارع حيفا، نابلس</p>
+        <p class="text-dark mb-4"><a href="tel:092344311" class="text-olive hover:underline">رقم الهاتف: 09-2344311</a></p>
+        <div class="flex space-x-4 space-x-reverse">
+          <a href="map.html" class="btn-map text-white px-6 py-2 rounded-lg inline-block">عرض على الخريطة</a>
+          <a href="#" class="btn-primary text-white px-6 py-2 rounded-lg inline-block">عرض التفاصيل</a>
+        </div>
+      </div>
+      <div class="card bg-white rounded-xl shadow-lg p-6 fade-in facility" data-city="nablus">
+        <i class="fas fa-hospital-alt text-4xl text-olive mb-4"></i>
+        <h3 class="text-xl text-red-dark font-bold mb-2">مستشفى الإنجيلي العربي</h3>
+        <p class="text-dark mb-1">العنوان: وسط المدينة، نابلس</p>
+        <p class="text-dark mb-4"><a href="tel:092383818" class="text-olive hover:underline">رقم الهاتف: 09-2383818</a></p>
+        <div class="flex space-x-4 space-x-reverse">
+          <a href="map.html" class="btn-map text-white px-6 py-2 rounded-lg inline-block">عرض على الخريطة</a>
+          <a href="#" class="btn-primary text-white px-6 py-2 rounded-lg inline-block">عرض التفاصيل</a>
+        </div>
+      </div>
+      <div class="card bg-white rounded-xl shadow-lg p-6 fade-in facility" data-city="nablus">
+        <i class="fas fa-hospital-alt text-4xl text-olive mb-4"></i>
+        <h3 class="text-xl text-red-dark font-bold mb-2">مستشفى نابلس التخصصي</h3>
+        <p class="text-dark mb-1">العنوان: شارع القدس، نابلس</p>
+        <p class="text-dark mb-4"><a href="tel:092333501" class="text-olive hover:underline">رقم الهاتف: 09-2333501</a></p>
+        <div class="flex space-x-4 space-x-reverse">
+          <a href="map.html" class="btn-map text-white px-6 py-2 rounded-lg inline-block">عرض على الخريطة</a>
+          <a href="#" class="btn-primary text-white px-6 py-2 rounded-lg inline-block">عرض التفاصيل</a>
+        </div>
+      </div>
+      <div class="card bg-white rounded-xl shadow-lg p-6 fade-in facility" data-city="nablus">
+        <i class="fas fa-hospital-alt text-4xl text-olive mb-4"></i>
+        <h3 class="text-xl text-red-dark font-bold mb-2">مستشفى جمعية الاتحاد النسائي العربي</h3>
+        <p class="text-dark mb-1">العنوان: حي المخفية، نابلس</p>
+        <p class="text-dark mb-4"><a href="tel:092371491" class="text-olive hover:underline">رقم الهاتف: 09-2371491</a></p>
+        <div class="flex space-x-4 space-x-reverse">
+          <a href="map.html" class="btn-map text-white px-6 py-2 rounded-lg inline-block">عرض على الخريطة</a>
+          <a href="#" class="btn-primary text-white px-6 py-2 rounded-lg inline-block">عرض التفاصيل</a>
+        </div>
+      </div>
+      <div class="card bg-white rounded-xl shadow-lg p-6 fade-in facility" data-city="nablus">
+        <i class="fas fa-hospital-alt text-4xl text-olive mb-4"></i>
+        <h3 class="text-xl text-red-dark font-bold mb-2">مستشفى الأمل للتأهيل</h3>
+        <p class="text-dark mb-1">العنوان: في نابلس</p>
+        <p class="text-dark mb-4">رقم الهاتف: غير متوفر</p>
+        <div class="flex space-x-4 space-x-reverse">
+          <a href="map.html" class="btn-map text-white px-6 py-2 rounded-lg inline-block">عرض على الخريطة</a>
+          <a href="#" class="btn-primary text-white px-6 py-2 rounded-lg inline-block">عرض التفاصيل</a>
+        </div>
+      </div>
+      <div class="card bg-white rounded-xl shadow-lg p-6 fade-in facility" data-city="nablus">
+        <i class="fas fa-hospital-alt text-4xl text-olive mb-4"></i>
+        <h3 class="text-xl text-red-dark font-bold mb-2">مجمع الشهداء الطبي العسكري</h3>
+        <p class="text-dark mb-1">العنوان: في نابلس</p>
+        <p class="text-dark mb-4"><a href="tel:092312258" class="text-olive hover:underline">رقم الهاتف: 09-2312258</a></p>
+        <div class="flex space-x-4 space-x-reverse">
+          <a href="map.html" class="btn-map text-white px-6 py-2 rounded-lg inline-block">عرض على الخريطة</a>
+          <a href="#" class="btn-primary text-white px-6 py-2 rounded-lg inline-block">عرض التفاصيل</a>
+        </div>
+      </div>
+      <div class="card bg-white rounded-xl shadow-lg p-6 fade-in facility" data-city="nablus">
+        <i class="fas fa-hospital-alt text-4xl text-olive mb-4"></i>
+        <h3 class="text-xl text-red-dark font-bold mb-2">مستشفى الهلال الأحمر الفلسطيني</h3>
+        <p class="text-dark mb-1">العنوان: حي الضواحي، نابلس</p>
+        <p class="text-dark mb-4">رقم الهاتف: غير متوفر</p>
+        <div class="flex space-x-4 space-x-reverse">
+          <a href="map.html" class="btn-map text-white px-6 py-2 rounded-lg inline-block">عرض على الخريطة</a>
+          <a href="#" class="btn-primary text-white px-6 py-2 rounded-lg inline-block">عرض التفاصيل</a>
+        </div>
+      </div>
+      <!-- Jenin Hospitals -->
+      <div class="card bg-white rounded-xl shadow-lg p-6 fade-in facility" data-city="jenin">
+        <i class="fas fa-hospital-alt text-4xl text-olive mb-4"></i>
+        <h3 class="text-xl text-red-dark font-bold mb-2">مستشفى الشهيد د. خليل سليمان الحكومي</h3>
+        <p class="text-dark mb-1">العنوان: وسط المدينة، جنين</p>
+        <p class="text-dark mb-4"><a href="tel:042436688" class="text-olive hover:underline">رقم الهاتف: 04-2436688</a></p>
+        <div class="flex space-x-4 space-x-reverse">
+          <a href="map.html" class="btn-map text-white px-6 py-2 rounded-lg inline-block">عرض على الخريطة</a>
+          <a href="#" class="btn-primary text-white px-6 py-2 rounded-lg inline-block">عرض التفاصيل</a>
+        </div>
+      </div>
+      <div class="card bg-white rounded-xl shadow-lg p-6 fade-in facility" data-city="jenin">
+        <i class="fas fa-hospital-alt text-4xl text-olive mb-4"></i>
+        <h3 class="text-xl text-red-dark font-bold mb-2">مستشفى الرازي</h3>
+        <p class="text-dark mb-1">العنوان: حي الرازي، جنين</p>
+        <p class="text-dark mb-4"><a href="tel:042505055" class="text-olive hover:underline">رقم الهاتف: 04-2505055</a></p>
+        <div class="flex space-x-4 space-x-reverse">
+          <a href="map.html" class="btn-map text-white px-6 py-2 rounded-lg inline-block">عرض على الخريطة</a>
+          <a href="#" class="btn-primary text-white px-6 py-2 rounded-lg inline-block">عرض التفاصيل</a>
+        </div>
+      </div>
+      <div class="card bg-white rounded-xl shadow-lg p-6 fade-in facility" data-city="jenin">
+        <i class="fas fa-hospital-alt text-4xl text-olive mb-4"></i>
+        <h3 class="text-xl text-red-dark font-bold mb-2">مستشفى الشفاء</h3>
+        <p class="text-dark mb-1">العنوان: في جنين</p>
+        <p class="text-dark mb-4"><a href="tel:042501004" class="text-olive hover:underline">رقم الهاتف: 04-2501004</a></p>
+        <div class="flex space-x-4 space-x-reverse">
+          <a href="map.html" class="btn-map text-white px-6 py-2 rounded-lg inline-block">عرض على الخريطة</a>
+          <a href="#" class="btn-primary text-white px-6 py-2 rounded-lg inline-block">عرض التفاصيل</a>
+        </div>
+      </div>
+      <div class="card bg-white rounded-xl shadow-lg p-6 fade-in facility" data-city="jenin">
+        <i class="fas fa-hospital-alt text-4xl text-olive mb-4"></i>
+        <h3 class="text-xl text-red-dark font-bold mb-2">مستشفى الإنجيلي</h3>
+        <p class="text-dark mb-1">العنوان: في جنين</p>
+        <p class="text-dark mb-4"><a href="tel:042510333" class="text-olive hover:underline">رقم الهاتف: 04-2510333</a></p>
+        <div class="flex space-x-4 space-x-reverse">
+          <a href="map.html" class="btn-map text-white px-6 py-2 rounded-lg inline-block">عرض على الخريطة</a>
+          <a href="#" class="btn-primary text-white px-6 py-2 rounded-lg inline-block">عرض التفاصيل</a>
+        </div>
+      </div>
+      <div class="card bg-white rounded-xl shadow-lg p-6 fade-in facility" data-city="jenin">
+        <i class="fas fa-hospital-alt text-4xl text-olive mb-4"></i>
+        <h3 class="text-xl text-red-dark font-bold mb-2">مستشفى الأمل للتوليد</h3>
+        <p class="text-dark mb-1">العنوان: حي المراح، جنين</p>
+        <p class="text-dark mb-4"><a href="tel:042503680" class="text-olive hover:underline">رقم الهاتف: 04-2503680</a></p>
+        <div class="flex space-x-4 space-x-reverse">
+          <a href="map.html" class="btn-map text-white px-6 py-2 rounded-lg inline-block">عرض على الخريطة</a>
+          <a href="#" class="btn-primary text-white px-6 py-2 rounded-lg inline-block">عرض التفاصيل</a>
+        </div>
+      </div>
+      <div class="card bg-white rounded-xl shadow-lg p-6 fade-in facility" data-city="jenin">
+        <i class="fas fa-hospital-alt text-4xl text-olive mb-4"></i>
+        <h3 class="text-xl text-red-dark font-bold mb-2">المحطة الجراحية الأردنية</h3>
+        <p class="text-dark mb-1">العنوان: في جنين</p>
+        <p class="text-dark mb-4"><a href="tel:042503334" class="text-olive hover:underline">رقم الهاتف: 04-2503334</a></p>
+        <div class="flex space-x-4 space-x-reverse">
+          <a href="map.html" class="btn-map text-white px-6 py-2 rounded-lg inline-block">عرض على الخريطة</a>
+          <a href="#" class="btn-primary text-white px-6 py-2 rounded-lg inline-block">عرض التفاصيل</a>
+        </div>
+      </div>
+      <div class="card bg-white rounded-xl shadow-lg p-6 fade-in facility" data-city="jenin">
+        <i class="fas fa-hospital-alt text-4xl text-olive mb-4"></i>
+        <h3 class="text-xl text-red-dark font-bold mb-2">مستشفى ابن سينا التخصصي</h3>
+        <p class="text-dark mb-1">العنوان: حي السيلة، جنين</p>
+        <p class="text-dark mb-4">رقم الهاتف: غير متوفر</p>
+        <div class="flex space-x-4 space-x-reverse">
+          <a href="map.html" class="btn-map text-white px-6 py-2 rounded-lg inline-block">عرض على الخريطة</a>
+          <a href="#" class="btn-primary text-white px-6 py-2 rounded-lg inline-block">عرض التفاصيل</a>
+        </div>
+      </div>
+      <!-- Tulkarm Hospitals -->
+      <div class="card bg-white rounded-xl shadow-lg p-6 fade-in facility" data-city="tulkarm">
+        <i class="fas fa-hospital-alt text-4xl text-olive mb-4"></i>
+        <h3 class="text-xl text-red-dark font-bold mb-2">مستشفى الشهيد د. ثابث ثابت الحكومي</h3>
+        <p class="text-dark mb-1">العنوان: شارع الإستقلال، طولكرم</p>
+        <p class="text-dark mb-4"><a href="tel:092672222" class="text-olive hover:underline">رقم الهاتف: 09-2672222</a></p>
+        <div class="flex space-x-4 space-x-reverse">
+          <a href="map.html" class="btn-map text-white px-6 py-2 rounded-lg inline-block">عرض على الخريطة</a>
+          <a href="#" class="btn-primary text-white px-6 py-2 rounded-lg inline-block">عرض التفاصيل</a>
+        </div>
+      </div>
+      <div class="card bg-white rounded-xl shadow-lg p-6 fade-in facility" data-city="tulkarm">
+        <i class="fas fa-hospital-alt text-4xl text-olive mb-4"></i>
+        <h3 class="text-xl text-red-dark font-bold mb-2">مستشفى جمعية الهلال الأحمر الفلسطيني</h3>
+        <p class="text-dark mb-1">العنوان: حي السلام، طولكرم</p>
+        <p class="text-dark mb-4"><a href="tel:092672622" class="text-olive hover:underline">رقم الهاتف: 09-2672622</a></p>
+        <div class="flex space-x-4 space-x-reverse">
+          <a href="map.html" class="btn-map text-white px-6 py-2 rounded-lg inline-block">عرض على الخريطة</a>
+          <a href="#" class="btn-primary text-white px-6 py-2 rounded-lg inline-block">عرض التفاصيل</a>
+        </div>
+      </div>
+      <div class="card bg-white rounded-xl shadow-lg p-6 fade-in facility" data-city="tulkarm">
+        <i class="fas fa-hospital-alt text-4xl text-olive mb-4"></i>
+        <h3 class="text-xl text-red-dark font-bold mb-2">مستشفى الإسراء التخصصي</h3>
+        <p class="text-dark mb-1">العنوان: في طولكرم</p>
+        <p class="text-dark mb-4"><a href="tel:092680680" class="text-olive hover:underline">رقم الهاتف: 09-2680680</a></p>
+        <div class="flex space-x-4 space-x-reverse">
+          <a href="map.html" class="btn-map text-white px-6 py-2 rounded-lg inline-block">عرض على الخريطة</a>
+          <a href="#" class="btn-primary text-white px-6 py-2 rounded-lg inline-block">عرض التفاصيل</a>
+        </div>
+      </div>
+      <div class="card bg-white rounded-xl shadow-lg p-6 fade-in facility" data-city="tulkarm">
+        <i class="fas fa-hospital-alt text-4xl text-olive mb-4"></i>
+        <h3 class="text-xl text-red-dark font-bold mb-2">مستشفى سان جون للعيون</h3>
+        <p class="text-dark mb-1">العنوان: بلدة عنبتا، طولكرم</p>
+        <p class="text-dark mb-4">رقم الهاتف: غير متوفر</p>
+        <div class="flex space-x-4 space-x-reverse">
+          <a href="map.html" class="btn-map text-white px-6 py-2 rounded-lg inline-block">عرض على الخريطة</a>
+          <a href="#" class="btn-primary text-white px-6 py-2 rounded-lg inline-block">عرض التفاصيل</a>
+        </div>
+      </div>
+      <div class="card bg-white rounded-xl shadow-lg p-6 fade-in facility" data-city="tulkarm">
+        <i class="fas fa-hospital-alt text-4xl text-olive mb-4"></i>
+        <h3 class="text-xl text-red-dark font-bold mb-2">مستشفى عتيل الحكومي</h3>
+        <p class="text-dark mb-1">العنوان: بلدة عتيل، طولكرم</p>
+        <p class="text-dark mb-4">رقم الهاتف: غير متوفر</p>
+        <div class="flex space-x-4 space-x-reverse">
+          <a href="map.html" class="btn-map text-white px-6 py-2 rounded-lg inline-block">عرض على الخريطة</a>
+          <a href="#" class="btn-primary text-white px-6 py-2 rounded-lg inline-block">عرض التفاصيل</a>
+        </div>
+      </div>
+      <!-- Qalqilya Hospitals -->
+      <div class="card bg-white rounded-xl shadow-lg p-6 fade-in facility" data-city="qalqilya">
+        <i class="fas fa-hospital-alt text-4xl text-olive mb-4"></i>
+        <h3 class="text-xl text-red-dark font-bold mb-2">مستشفى د. درويش نزال الحكومي</h3>
+        <p class="text-dark mb-1">العنوان: وسط المدينة، قلقيلية</p>
+        <p class="text-dark mb-4"><a href="tel:092946065" class="text-olive hover:underline">رقم الهاتف: 09-2946065</a></p>
+        <div class="flex space-x-4 space-x-reverse">
+          <a href="map.html" class="btn-map text-white px-6 py-2 rounded-lg inline-block">عرض على الخريطة</a>
+          <a href="#" class="btn-primary text-white px-6 py-2 rounded-lg inline-block">عرض التفاصيل</a>
+        </div>
+      </div>
+      <div class="card bg-white rounded-xl shadow-lg p-6 fade-in facility" data-city="qalqilya">
+        <i class="fas fa-hospital-alt text-4xl text-olive mb-4"></i>
+        <h3 class="text-xl text-red-dark font-bold mb-2">مستشفى الأونروا</h3>
+        <p class="text-dark mb-1">العنوان: مخيم قلقيلية</p>
+        <p class="text-dark mb-4"><a href="tel:092940008" class="text-olive hover:underline">رقم الهاتف: 09-2940008</a></p>
+        <div class="flex space-x-4 space-x-reverse">
+          <a href="map.html" class="btn-map text-white px-6 py-2 rounded-lg inline-block">عرض على الخريطة</a>
+          <a href="#" class="btn-primary text-white px-6 py-2 rounded-lg inline-block">عرض التفاصيل</a>
+        </div>
+      </div>
+      <!-- Tubas Hospitals -->
+      <div class="card bg-white rounded-xl shadow-lg p-6 fade-in facility" data-city="tubas">
+        <i class="fas fa-hospital-alt text-4xl text-olive mb-4"></i>
+        <h3 class="text-xl text-red-dark font-bold mb-2">مستشفى طوباس التركي الحكومي</h3>
+        <p class="text-dark mb-1">العنوان: وسط المدينة، طوباس</p>
+        <p class="text-dark mb-4"><a href="tel:092574836" class="text-olive hover:underline">رقم الهاتف: 09-2574836</a></p>
+        <div class="flex space-x-4 space-x-reverse">
+          <a href="map.html" class="btn-map text-white px-6 py-2 rounded-lg inline-block">عرض على الخريطة</a>
+          <a href="#" class="btn-primary text-white px-6 py-2 rounded-lg inline-block">عرض التفاصيل</a>
+        </div>
+      </div>
+      <div class="card bg-white rounded-xl shadow-lg p-6 fade-in facility" data-city="tubas">
+        <i class="fas fa-hospital-alt text-4xl text-olive mb-4"></i>
+        <h3 class="text-xl text-red-dark font-bold mb-2">مستشفى كشدة</h3>
+        <p class="text-dark mb-1">العنوان: خربة كشدة، طوباس</p>
+        <p class="text-dark mb-4">رقم الهاتف: غير متوفر</p>
+        <div class="flex space-x-4 space-x-reverse">
+          <a href="map.html" class="btn-map text-white px-6 py-2 rounded-lg inline-block">عرض على الخريطة</a>
+          <a href="#" class="btn-primary text-white px-6 py-2 rounded-lg inline-block">عرض التفاصيل</a>
+        </div>
+      </div>
+      <!-- Salfit Hospitals -->
+      <div class="card bg-white rounded-xl shadow-lg p-6 fade-in facility" data-city="salfit">
+        <i class="fas fa-hospital-alt text-4xl text-olive mb-4"></i>
+        <h3 class="text-xl text-red-dark font-bold mb-2">مستشفى الشهيد ياسر عرفات الحكومي</h3>
+        <p class="text-dark mb-1">العنوان: وسط المدينة، سلفيت</p>
+        <p class="text-dark mb-4"><a href="tel:092515111" class="text-olive hover:underline">رقم الهاتف: 09-2515111</a></p>
+        <div class="flex space-x-4 space-x-reverse">
+          <a href="map.html" class="btn-map text-white px-6 py-2 rounded-lg inline-block">عرض على الخريطة</a>
+          <a href="#" class="btn-primary text-white px-6 py-2 rounded-lg inline-block">عرض التفاصيل</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer: تصميم وإعداد المهندس عمر أيمن عودة -->
+  <footer class="bg-gray-light py-8 mt-auto">
+    <div class="container mx-auto px-4 text-center">
+      <p class="footer-text text-gray-600">إعداد وتصميم: <span class="text-red-dark font-bold">المهندس عمر أيمن عودة</span></p>
+    </div>
+  </footer>
+
+  <!-- JavaScript: تصميم وإعداد المهندس عمر أيمن عودة -->
+  <script>
+    // إعداد وتصميم: المهندس عمر أيمن عودة
+    // Dark Mode Toggle
+    const themeToggle = document.getElementById('theme-toggle');
+    themeToggle.addEventListener('click', () => {
+      document.body.classList.toggle('dark-mode');
+      const icon = themeToggle.querySelector('i');
+      icon.classList.toggle('fa-moon');
+      icon.classList.toggle('fa-sun');
+    });
+
+    // Filter Functionality
+    const filterButtons = document.querySelectorAll('.filter-btn');
+    const facilities = document.querySelectorAll('.facility');
+
+    filterButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        const filter = button.getAttribute('data-filter');
+        
+        // Update active button
+        filterButtons.forEach(btn => btn.classList.remove('active'));
+        button.classList.add('active');
+
+        // Filter facilities
+        facilities.forEach(facility => {
+          const city = facility.getAttribute('data-city');
+          if (filter === 'all' || city === filter) {
+            facility.style.display = 'block';
+            facility.classList.add('fade-in');
+          } else {
+            facility.style.display = 'none';
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>

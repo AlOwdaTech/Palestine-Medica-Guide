@@ -1,0 +1,209 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <!-- تصميم وإعداد: المهندس عمر أيمن عودة -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>دليل فلسطين الطبي</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome for Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <!-- Amiri Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+  <!-- Cairo Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+  <!-- Montserrat Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    /* إعداد وتصميم: المهندس عمر أيمن عودة */
+    body {
+      font-family: 'Amiri', serif;
+      background-color: #FAF9F6;
+      color: #222222;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+    .dark-mode {
+      background-color: #222222;
+      color: #FAF9F6;
+    }
+    .dark-mode .bg-cream { background-color: #333333 !important; }
+    .dark-mode .text-dark { color: #FAF9F6 !important; }
+    .dark-mode .bg-gray-light { background-color: #444444 !important; }
+    h1, h2, h3 {
+      font-family: 'Cairo', sans-serif;
+      font-weight: 700;
+    }
+    .navbar {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 600;
+    }
+    .card {
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      border-radius: 12px;
+    }
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+    }
+    .btn-primary {
+      background-color: #556B2F;
+      transition: background-color 0.3s ease, transform 0.2s ease;
+    }
+    .btn-primary:hover {
+      background-color: #6B8E23;
+      transform: scale(1.05);
+    }
+    .search-bar {
+      transition: box-shadow 0.3s ease;
+    }
+    .search-bar:focus-within {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    .footer-text {
+      font-family: 'Cairo', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+    /* أنيميشن التحميل */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in {
+      animation: fadeIn 0.8s ease-out forwards;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+  <!-- Sticky Navbar: تصميم وإعداد المهندس عمر أيمن عودة -->
+  <nav class="bg-cream sticky top-0 z-50 shadow-lg">
+    <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+      <div class="flex items-center">
+        <i class="fas fa-hospital text-3xl text-olive mr-3"></i>
+        <a href="index.html" class="text-3xl font-bold text-red-dark">دليل فلسطين الطبي</a>
+      </div>
+      <div class="flex items-center space-x-6 space-x-reverse">
+        <a href="index.html" class="text-dark hover:text-olive navbar text-lg">الرئيسية</a>
+        <a href="hospitals.html" class="text-dark hover:text-olive navbar text-lg">المستشفيات</a>
+        <a href="clinics.html" class="text-dark hover:text-olive navbar text-lg">العيادات</a>
+        <a href="map.html" class="text-dark hover:text-olive navbar text-lg">الخريطة</a>
+        <a href="about.html" class="text-dark hover:text-olive navbar text-lg">من نحن</a>
+        <a href="contact.html" class="text-dark hover:text-olive navbar text-lg">اتصل بنا</a>
+        <button id="theme-toggle" class="text-dark hover:text-olive text-lg">
+          <i class="fas fa-moon"></i>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section with Search Bar: تصميم وإعداد المهندس عمر أيمن عودة -->
+  <section class="bg-cream py-16 fade-in">
+    <div class="container mx-auto px-4 text-center">
+      <h1 class="text-4xl md:text-5xl text-red-dark font-bold mb-6">ابحث عن الرعاية الطبية بسهولة</h1>
+      <p class="text-xl text-dark mb-8 max-w-3xl mx-auto">دليل شامل للمستشفيات والعيادات في شمال الضفة الغربية مع خريطة تفاعلية للوصول السريع</p>
+      <div class="max-w-3xl mx-auto search-bar bg-white rounded-xl shadow-md p-3 flex items-center">
+        <input type="text" id="search-input" placeholder="ابحث باسم المنشأة، المدينة، أو التخصص" class="w-full p-3 text-dark focus:outline-none bg-transparent text-lg">
+        <button class="btn-primary text-white p-3 rounded-lg">
+          <i class="fas fa-search text-lg"></i>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Featured Facilities Section: تصميم وإعداد المهندس عمر أيمن عودة -->
+  <section class="container mx-auto px-4 py-16">
+    <h2 class="text-3xl md:text-4xl text-red-dark font-bold mb-10 text-center fade-in">أبرز المنشآت الطبية</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+      <!-- Facility Card 1 -->
+      <div class="card bg-white rounded-xl shadow-lg p-6 fade-in" style="animation-delay: 0.2s;">
+        <i class="fas fa-hospital-alt text-4xl text-olive mb-4"></i>
+        <h3 class="text-xl text-red-dark font-bold mb-2">مستشفى رفيديا الجراحي الحكومي</h3>
+        <p class="text-dark mb-1">العنوان: نابلس</p>
+        <p class="text-dark mb-4">رقم الهاتف: 09-2390390</p>
+        <a href="hospitals.html" class="btn-primary text-white px-6 py-2 rounded-lg inline-block">عرض التفاصيل</a>
+      </div>
+      <!-- Facility Card 2 -->
+      <div class="card bg-white rounded-xl shadow-lg p-6 fade-in" style="animation-delay: 0.4s;">
+        <i class="fas fa-hospital-alt text-4xl text-olive mb-4"></i>
+        <h3 class="text-xl text-red-dark font-bold mb-2">مستشفى الشهيد د. خليل سليمان</h3>
+        <p class="text-dark mb-1">العنوان: جنين</p>
+        <p class="text-dark mb-4">رقم الهاتف: 04-2436688</p>
+        <a href="hospitals.html" class="btn-primary text-white px-6 py-2 rounded-lg inline-block">عرض التفاصيل</a>
+      </div>
+      <!-- Facility Card 3 -->
+      <div class="card bg-white rounded-xl shadow-lg p-6 fade-in" style="animation-delay: 0.6s;">
+        <i class="fas fa-hospital-alt text-4xl text-olive mb-4"></i>
+        <h3 class="text-xl text-red-dark font-bold mb-2">مستشفى الشهيد ياسر عرفات</h3>
+        <p class="text-dark mb-1">العنوان: سلفيت</p>
+        <p class="text-dark mb-4">رقم الهاتف: 09-2515111</p>
+        <a href="hospitals.html" class="btn-primary text-white px-6 py-2 rounded-lg inline-block">عرض التفاصيل</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer: تصميم وإعداد المهندس عمر أيمن عودة -->
+  <footer class="bg-gray-light py-8 mt-auto">
+    <div class="container mx-auto px-4 text-center">
+      <p class="footer-text text-gray-600">إعداد وتصميم: <span class="text-red-dark font-bold">المهندس عمر أيمن عودة</span></p>
+    </div>
+  </footer>
+
+  <!-- JavaScript: تصميم وإعداد المهندس عمر أيمن عودة -->
+  <script>
+    // إعداد وتصميم: المهندس عمر أيمن عودة
+    const themeToggle = document.getElementById('theme-toggle');
+    themeToggle.addEventListener('click', () => {
+      document.body.classList.toggle('dark-mode');
+      const icon = themeToggle.querySelector('i');
+      icon.classList.toggle('fa-moon');
+      icon.classList.toggle('fa-sun');
+    });
+
+    const searchInput = document.getElementById('search-input');
+    searchInput.addEventListener('input', (e) => {
+      console.log('Search query:', e.target.value);
+      // Implement search functionality here
+    });
+  </script>
+</body>
+</html>

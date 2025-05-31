@@ -1,0 +1,322 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <!-- تصميم وإعداد: المهندس عمر أيمن عودة -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>الخريطة - دليل فلسطين الطبي</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome for Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" integrity="sha512-z3gLpd7yknf1YoNbCzqRKc4qyor8gaKU1qmn+CShxbuBusANI9QpRohGBreCFkKxLhei6S9CQXFEbbKuqLg0DA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <!-- Amiri Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+  <!-- Cairo Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+  <!-- Montserrat Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&display=swap" rel="stylesheet">
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <style>
+    /* إعداد وتصميم: المهندس عمر أيمن عودة */
+    body {
+      font-family: 'Amiri', serif;
+      background-color: #FAF9F6;
+      color: #222222;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+    .dark-mode {
+      background-color: #222222;
+      color: #FAF9F6;
+    }
+    .dark-mode .bg-cream { background-color: #333333 !important; }
+    .dark-mode .text-dark { color: #FAF9F6 !important; }
+    .dark-mode .bg-gray-light { background-color: #444444 !important; }
+    h1, h2, h3 {
+      font-family: 'Cairo', sans-serif;
+      font-weight: 700;
+    }
+    .navbar {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 600;
+    }
+    .filter-btn {
+      background-color: #E5E5E5;
+      transition: background-color 0.3s ease;
+    }
+    .filter-btn:hover, .filter-btn.active {
+      background-color: #556B2F;
+      color: #FAF9F6;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in {
+      animation: fadeIn 0.8s ease-out forwards;
+    }
+    .footer-text {
+      font-family: 'Cairo', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+    #map {
+      height: 600px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    .leaflet-popup-content-wrapper {
+      font-family: 'Cairo', sans-serif;
+      text-align: right;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+  <!-- Sticky Navbar: تصميم وإعداد المهندس عمر أيمن عودة -->
+  <nav class="bg-cream sticky top-0 z-50 shadow-lg">
+    <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+      <div class="flex items-center">
+        <i class="fas fa-hospital text-3xl text-olive mr-3"></i>
+        <a href="index.html" class="text-3xl font-bold text-red-dark">دليل فلسطين الطبي</a>
+      </div>
+      <div class="flex items-center space-x-6 space-x-reverse">
+        <a href="index.html" class="text-dark hover:text-olive navbar text-lg">الرئيسية</a>
+        <a href="hospitals.html" class="text-dark hover:text-olive navbar text-lg">المستشفيات</a>
+        <a href="clinics.html" class="text-dark hover:text-olive navbar text-lg">العيادات</a>
+        <a href="map.html" class="text-dark hover:text-olive navbar text-lg font-bold">الخريطة</a>
+        <a href="about.html" class="text-dark hover:text-olive navbar text-lg">من نحن</a>
+        <a href="contact.html" class="text-dark hover:text-olive navbar text-lg">اتصل بنا</a>
+        <button id="theme-toggle" class="text-dark hover:text-olive text-lg">
+          <i class="fas fa-moon"></i>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section: تصميم وإعداد المهندس عمر أيمن عودة -->
+  <section class="bg-cream py-16 fade-in">
+    <div class="container mx-auto px-4 text-center">
+      <h1 class="text-4xl md:text-5xl text-red-dark font-bold mb-6">خريطة المستشفيات والعيادات في شمال الضفة الغربية</h1>
+      <p class="text-xl text-dark mb-8 max-w-3xl mx-auto">استكشف مواقع جميع المستشفيات والعيادات في نابلس، جنين، طولكرم، قلقيلية، طوباس، وسلفيت مع تفاصيل الاتصال</p>
+    </div>
+  </section>
+
+  <!-- Filter Section: تصميم وإعداد المهندس عمر أيمن عودة -->
+  <section class="container mx-auto px-4 py-8">
+    <div class="flex flex-col md:flex-row md:space-x-reverse md:space-x-8 mb-6">
+      <!-- Governorate Filter -->
+      <div class="mb-6 md:mb-0">
+        <h3 class="text-lg font-bold text-dark mb-4">تصفية حسب المحافظة:</h3>
+        <div class="flex flex-wrap gap-2">
+          <button class="filter-btn px-6 py-2 rounded-lg text-dark active" data-city="all">الكل</button>
+          <button class="filter-btn px-6 py-2 rounded-lg text-dark" data-city="Nablus">نابلس</button>
+          <button class="filter-btn px-6 py-2 rounded-lg text-dark" data-city="Jenin">جنين</button>
+          <button class="filter-btn px-6 py-2 rounded-lg text-dark" data-city="Tulkarm">طولكرم</button>
+          <button class="filter-btn px-6 py-2 rounded-lg text-dark" data-city="Qalqilya">قلقيلية</button>
+          <button class="filter-btn px-6 py-2 rounded-lg text-dark" data-city="Tubas">طوباس</button>
+          <button class="filter-btn px-6 py-2 rounded-lg text-dark" data-city="Salfit">سلفيت</button>
+        </div>
+      </div>
+      <!-- Facility Type Filter -->
+      <div>
+        <h3 class="text-lg font-bold text-dark mb-4">تصفية حسب النوع:</h3>
+        <div class="flex flex-wrap gap-2">
+          <button class="filter-btn px-6 py-2 rounded-lg text-dark active" data-type="all">الكل</button>
+          <button class="filter-btn px-6 py-2 rounded-lg text-dark" data-type="hospital">المستشفيات</button>
+          <button class="filter-btn px-6 py-2 rounded-lg text-dark" data-type="clinic">العيادات</button>
+        </div>
+      </div>
+    </div>
+    <p class="text-center text-dark">ملاحظة: العيادات المتنقلة (لجان العمل الصحي) غير مدرجة على الخريطة بسبب عدم وجود موقع ثابت.</p>
+  </section>
+
+  <!-- Map Section: تصميم وإعداد المهندس عمر أيمن عودة -->
+  <section class="container mx-auto px-4 py-12">
+    <div id="map" class="fade-in"></div>
+  </section>
+
+  <!-- Footer: تصميم وإعداد المهندس عمر أيمن عودة -->
+  <footer class="bg-gray-light py-8 mt-auto">
+    <div class="container mx-auto px-4 text-center">
+      <p class="footer-text text-gray-600">إعداد وتصميم: <span class="text-red-dark font-bold">المهندس عمر أيمن عودة</span></p>
+    </div>
+  </footer>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <!-- JavaScript: تصميم وإعداد المهندس عمر أيمن عودة -->
+  <script>
+    // إعداد وتصميم: المهندس عمر أيمن عودة
+    // Dark Mode Toggle
+    const themeToggle = document.getElementById('theme-toggle');
+    themeToggle.addEventListener('click', () => {
+      document.body.classList.toggle('dark-mode');
+      const icon = themeToggle.querySelector('i');
+      icon.classList.toggle('fa-moon');
+      icon.classList.toggle('fa-sun');
+    });
+
+    // Initialize Map
+    const map = L.map('map').setView([32.2211, 35.2540], 9); // Center on Nablus
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 18
+    }).addTo(map);
+
+    // Custom Icons
+    const hospitalIcon = L.divIcon({
+      className: 'custom-icon',
+      html: '<i class="fas fa-hospital fa-2x" style="color: #B22222;"></i>',
+      iconSize: [30, 30],
+      iconAnchor: [15, 30],
+      popupAnchor: [0, -30]
+    });
+
+    const clinicIcon = L.divIcon({
+      className: 'custom-icon',
+      html: '<i class="fas fa-clinic-medical fa-2x" style="color: #556B2F;"></i>',
+      iconSize: [30, 30],
+      iconAnchor: [15, 30],
+      popupAnchor: [0, -30]
+    });
+
+    // Facility Data
+    const facilities = [
+      // Hospitals
+      { name: "مستشفى رفيديا الجراحي الحكومي", type: "hospital", city: "Nablus", coords: [32.2211, 35.2386], address: "حي رفيديا، نابلس", phone: "092390390", notes: "موقع دقيق" },
+      { name: "المستشفى الوطني الحكومي", type: "hospital", city: "Nablus", coords: [32.2200, 35.2540], address: "وسط المدينة، نابلس", phone: "092384837", notes: "موقع تقريبي" },
+      { name: "مستشفى النجاح الوطني الجامعي", type: "hospital", city: "Nablus", coords: [32.2235, 35.2350], address: "شارع النجاح، نابلس", phone: "092331471", notes: "موقع دقيق" },
+      { name: "مستشفى العربي التخصصي", type: "hospital", city: "Nablus", coords: [32.2180, 35.2500], address: "شارع حيفا، نابلس", phone: "092344311", notes: "موقع دقيق" },
+      { name: "مستشفى الشهيد د. خليل سليمان الحكومي", type: "hospital", city: "Jenin", coords: [32.4610, 35.2950], address: "وسط المدينة، جنين", phone: "042436688", notes: "موقع تقريبي" },
+      { name: "مستشفى الرازي", type: "hospital", city: "Jenin", coords: [32.4600, 35.2900], address: "حي الرازي، جنين", phone: "042505055", notes: "موقع دقيق" },
+      { name: "مستشفى الشهيد د. ثابث ثابت الحكومي", type: "hospital", city: "Tulkarm", coords: [32.3110, 35.0260], address: "شارع الإستقلال، طولكرم", phone: "092672222", notes: "موقع دقيق" },
+      { name: "مستشفى د. درويش نزال الحكومي", type: "hospital", city: "Qalqilya", coords: [32.1900, 34.9700], address: "وسط المدينة، قلقيلية", phone: "092946065", notes: "موقع تقريبي" },
+      { name: "مستشفى طوباس التركي الحكومي", type: "hospital", city: "Tubas", coords: [32.3200, 35.3700], address: "وسط المدينة، طوباس", phone: "092574836", notes: "موقع تقريبي" },
+      { name: "مستشفى الشهيد ياسر عرفات الحكومي", type: "hospital", city: "Salfit", coords: [32.0850, 35.1800], address: "وسط المدينة، سلفيت", phone: "092515111", notes: "موقع تقريبي" },
+      { name: "مستشفى الأونروا", type: "hospital", city: "Qalqilya", coords: [32.1850, 34.9650], address: "مخيم قلقيلية", phone: "092940008", notes: "موقع دقيق" },
+      // Clinics
+      { name: "مستوصف الرحمة", type: "clinic", city: "Nablus", coords: [32.2220, 35.2400], address: "حي المخفية، نابلس", phone: "092371234", notes: "موقع دقيق" },
+      { name: "مركز صحي نابلس الأولي", type: "clinic", city: "Nablus", coords: [32.2200, 35.2540], address: "وسط المدينة، نابلس", phone: "092385678", notes: "موقع تقريبي" },
+      { name: "مركز صحي عسكر", type: "clinic", city: "Nablus", coords: [32.2150, 35.2800], address: "مخيم عسكر، نابلس", phone: "092345678", notes: "موقع دقيق" },
+      { name: "مركز صحي بلاطة", type: "clinic", city: "Nablus", coords: [32.2100, 35.2700], address: "مخيم بلاطة، نابلس", phone: "092341234", notes: "موقع دقيق" },
+      { name: "مركز الشفاء التخصصي", type: "clinic", city: "Nablus", coords: [32.2180, 35.2600], address: "البلدة القديمة، نابلس", phone: "092387654", notes: "موقع دقيق" },
+      { name: "مركز صحي مخيم عسكر القديم", type: "clinic", city: "Nablus", coords: [32.2150, 35.2850], address: "مخيم عسكر القديم، نابلس", phone: "092340987", notes: "موقع دقيق" },
+      { name: "مركز عورتا الصحي", type: "clinic", city: "Nablus", coords: [32.1600, 35.2800], address: "قرية عورتا، نابلس", phone: "", notes: "موقع دقيق" },
+      { name: "مركز صحي جنين الأولي", type: "clinic", city: "Jenin", coords: [32.4610, 35.2950], address: "وسط المدينة، جنين", phone: "042501234", notes: "موقع تقريبي" },
+      { name: "مركز صحي يعبد", type: "clinic", city: "Jenin", coords: [32.4450, 35.1700], address: "بلدة يعبد، جنين", phone: "042506789", notes: "موقع دقيق" },
+      { name: "مركز صحي مخيم جنين", type: "clinic", city: "Jenin", coords: [32.4600, 35.2900], address: "مخيم جنين", phone: "042502345", notes: "موقع دقيق" },
+      { name: "مركز صحي قباطية", type: "clinic", city: "Jenin", coords: [32.4100, 35.2800], address: "بلدة قباطية، جنين", phone: "", notes: "موقع دقيق" },
+      { name: "مركز صحي طولكرم الأولي", type: "clinic", city: "Tulkarm", coords: [32.3110, 35.0260], address: "وسط المدينة، طولكرم", phone: "092671234", notes: "موقع تقريبي" },
+      { name: "مركز صحي نور شمس", type: "clinic", city: "Tulkarm", coords: [32.3200, 35.0500], address: "مخيم نور شمس، طولكرم", phone: "092678901", notes: "موقع دقيق" },
+      { name: "مركز صحي مخيم طولكرم", type: "clinic", city: "Tulkarm", coords: [32.3150, 35.0400], address: "مخيم طولكرم", phone: "092672345", notes: "موقع دقيق" },
+      { name: "مركز صحي عتيل", type: "clinic", city: "Tulkarm", coords: [32.3700, 35.0700], address: "بلدة عتيل، طولكرم", phone: "", notes: "موقع دقيق" },
+      { name: "مركز صحي قلقيلية الأولي", type: "clinic", city: "Qalqilya", coords: [32.1900, 34.9700], address: "وسط المدينة، قلقيلية", phone: "092941234", notes: "موقع تقريبي" },
+      { name: "مركز صحي كفر ثلث", type: "clinic", city: "Qalqilya", coords: [32.1500, 35.0500], address: "قرية كفر ثلث، قلقيلية", phone: "", notes: "موقع دقيق" },
+      { name: "مركز صحي طوباس الأولي", type: "clinic", city: "Tubas", coords: [32.3200, 35.3700], address: "وسط المدينة، طوباس", phone: "092571234", notes: "موقع تقريبي" },
+      { name: "مركز صحي طمون", type: "clinic", city: "Tubas", coords: [32.2800, 35.3800], address: "بلدة طمون، طوباس", phone: "", notes: "موقع دقيق" },
+      { name: "مركز صحي سلفيت الأولي", type: "clinic", city: "Salfit", coords: [32.0850, 35.1800], address: "وسط المدينة، سلفيت", phone: "092511234", notes: "موقع تقريبي" },
+      { name: "مركز صحي بديا", type: "clinic", city: "Salfit", coords: [32.1100, 35.1400], address: "بلدة بديا، سلفيت", phone: "", notes: "موقع دقيق" }
+    ];
+
+    // Add Markers
+    const markers = [];
+    facilities.forEach(facility => {
+      const icon = facility.type === 'hospital' ? hospitalIcon : clinicIcon;
+      const phoneLink = facility.phone ? `<a href="tel:${facility.phone}" class="text-olive hover:underline">${facility.phone}</a>` : 'غير متوفر';
+      const popupContent = `
+        <div class="font-[Cairo] text-right p-2">
+          <h3 class="font-bold text-red-dark text-lg">${facility.name}</h3>
+          <p><strong>النوع:</strong> ${facility.type === 'hospital' ? 'مستشفى' : 'عيادة'}</p>
+          <p><strong>العنوان:</strong> ${facility.address}</p>
+          <p><strong>الهاتف:</strong> ${phoneLink}</p>
+          <p><strong>ملاحظة:</strong> ${facility.notes}</p>
+          <a href="#" class="text-white bg-olive px-4 py-1 rounded-lg mt-2 inline-block">عرض التفاصيل</a>
+        </div>
+      `;
+      const marker = L.marker(facility.coords, { icon: icon })
+        .bindPopup(popupContent)
+        .addTo(map);
+      marker.properties = {
+        city: facility.city,
+        type: facility.type
+      };
+      markers.push(marker);
+    });
+
+    // Filter Functionality
+    const cityFilters = document.querySelectorAll('.filter-btn[data-city]');
+    const typeFilters = document.querySelectorAll('.filter-btn[data-type]');
+
+    function updateMarkers() {
+      const activeCity = document.querySelector('.filter-btn.active[data-city]').getAttribute('data-city');
+      const activeType = document.querySelector('.filter-btn.active[data-type]').getAttribute('data-type');
+
+      markers.forEach(marker => {
+        const { city, type } = marker.properties;
+        const cityMatch = activeCity === 'all' || city === activeCity;
+        const typeMatch = activeType === 'all' || type === activeType;
+        if (cityMatch && typeMatch) {
+          map.addLayer(marker);
+        } else {
+          map.removeLayer(marker);
+        }
+      });
+    }
+
+    cityFilters.forEach(btn => {
+      btn.addEventListener('click', () => {
+        cityFilters.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        updateMarkers();
+      });
+    });
+
+    typeFilters.forEach(btn => {
+      btn.addEventListener('click', () => {
+        typeFilters.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        updateMarkers();
+      });
+    });
+  </script>
+</body>
+</html>
